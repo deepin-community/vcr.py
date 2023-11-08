@@ -1,0 +1,12 @@
+Document: python-vrc-doc
+Title: VCR.py Documentation
+Author: Kevin McCarthy
+Section: Programming/Python
+Abstract: vcr.py records all interactions that take place through the HTML
+ libraries it supports and writes them to flat files, called cassettes (YAML
+ format by default). These cassettes could be replayed then for fast,
+ deterministic and accurate HTML testing.
+
+Format: html
+Index: /usr/share/doc/python-vcr-doc/html/index.html
+Files: /usr/share/doc/python-vcr-doc/html/*.html
