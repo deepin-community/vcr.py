@@ -1,0 +1,51 @@
+From: Daniele Tricoli <eriol@mornie.org>
+Date: Sun, 28 Aug 2016 18:50:51 +0200
+Subject: Remove privacy breach URLs
+
+Forwarded: not-needed
+Patch-Name: remove-privacy-breach-urls.patch
+---
+ README.rst | 22 ----------------------
+ 1 file changed, 22 deletions(-)
+
+diff --git a/README.rst b/README.rst
+index 5a0ed8e..30ca92c 100644
+--- a/README.rst
++++ b/README.rst
+@@ -1,16 +1,10 @@
+-
+ ###########
+ VCR.py 📼
+ ###########
+ 
+ 
+-|PyPI| |Python versions| |Build Status| |CodeCov| |Gitter| |CodeStyleBlack|
+-
+ ----
+ 
+-.. image:: https://vcrpy.readthedocs.io/en/latest/_images/vcr.svg
+-   :alt: vcr.py logo
+-
+ 
+ This is a Python version of `Ruby's VCR
+ library <https://github.com/vcr/vcr>`__.
+@@ -57,19 +51,3 @@ License
+ 
+ This library uses the MIT license. See `LICENSE.txt <LICENSE.txt>`__ for
+ more details
+-
+-.. |PyPI| image:: https://img.shields.io/pypi/v/vcrpy.svg
+-   :target: https://pypi.python.org/pypi/vcrpy
+-.. |Python versions| image:: https://img.shields.io/pypi/pyversions/vcrpy.svg
+-   :target: https://pypi.python.org/pypi/vcrpy
+-.. |Build Status| image:: https://github.com/kevin1024/vcrpy/actions/workflows/main.yml/badge.svg
+-   :target: https://github.com/kevin1024/vcrpy/actions
+-.. |Gitter| image:: https://badges.gitter.im/Join%20Chat.svg
+-   :alt: Join the chat at https://gitter.im/kevin1024/vcrpy
+-   :target: https://gitter.im/kevin1024/vcrpy?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
+-.. |CodeCov| image:: https://codecov.io/gh/kevin1024/vcrpy/branch/master/graph/badge.svg
+-   :target: https://codecov.io/gh/kevin1024/vcrpy
+-   :alt: Code Coverage Status
+-.. |CodeStyleBlack| image:: https://img.shields.io/badge/code%20style-black-000000.svg 
+-   :target: https://github.com/psf/black
+-   :alt: Code Style: black

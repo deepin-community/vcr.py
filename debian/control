@@ -1,15 +1,69 @@
-Source: template-repository
-Section: unknown
+Source: vcr.py
+Section: python
 Priority: optional
-Maintainer: Tsic404 <liuheng@deepin.org>
-Build-Depends: debhelper (>= 11)
-Standards-Version: 4.1.3
-Homepage: https://github.com/deepin-community/template-repository
-#Vcs-Browser: https://salsa.debian.org/debian/deepin-community-template-repository
-#Vcs-Git: https://salsa.debian.org/debian/deepin-community-template-repository.git
+Maintainer: Debian Python Team <team+python@tracker.debian.org>
+Uploaders: Daniele Tricoli <eriol@debian.org>
+Build-Depends:
+ debhelper-compat (= 13),
+ dh-sequence-python3,
+ dh-sequence-sphinxdoc <!nodoc>,
+ pandoc,
+ python3-all,
+ python3-aiohttp,
+ python3-boto3,
+ python3-httplib2,
+ python3-pytest,
+ python3-pytest-httpbin,
+ python3-pytest-tornado,
+ python3-requests,
+ python3-setuptools,
+ python3-six,
+ python3-sphinx,
+ python3-sphinx-rtd-theme,
+ python3-tornado,
+ python3-urllib3,
+ python3-wrapt,
+ python3-yaml,
+ python3-yarl,
+Standards-Version: 4.6.2
+Testsuite: autopkgtest-pkg-pybuild
+Homepage: https://github.com/kevin1024/vcrpy/
+Vcs-Git: https://salsa.debian.org/python-team/packages/vcr.py.git
+Vcs-Browser: https://salsa.debian.org/python-team/packages/vcr.py
+Rules-Requires-Root: no
+Description: record and replay HTML interactions
+ vcr.py records all interactions that take place through the HTML libraries
+ it supports and writes them to flat files, called cassettes (YAML format by
+ default). These cassettes could be replayed then for fast, deterministic
+ and accurate HTML testing.
+ .
+ vcr.py supports the following Python HTTP libraries:
+  - urllib2 (stdlib)
+  - urllib3
+  - http.client (Python3 stdlib)
+  - Requests
+  - httplib2
+  - Boto (interface to Amazon Web Services)
+  - Tornado's HTTP client
 
-Package: template-repository
-Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: <insert up to 60 chars description>
- <insert long description, indented with spaces>
+Package: python3-vcr
+Architecture: all
+Depends:
+ ${misc:Depends},
+ ${python3:Depends}
+Description: ${source:Synopsis}
+ ${source:Extended-Description} (Python 3 library)
+ .
+ This package contains the modules for Python 3.
+
+Package: python-vcr-doc
+Section: doc
+Architecture: all
+Multi-Arch: foreign
+Depends:
+ ${misc:Depends},
+ ${sphinxdoc:Depends}
+Description: ${source:Synopsis} (Documentation)
+ ${source:Extended-Description}
+ .
+ This package contains the documentation.

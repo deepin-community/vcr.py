@@ -1,5 +1,228 @@
-template-repository (1.0-1) unstable; urgency=medium
+vcr.py (5.1.0-1) unstable; urgency=medium
 
-  * Initial release
+  * New upstream version 5.1.0
+  * debian/patches/0002-pytest.mark.online-tests-that-need-internet.patches
+    - Remove since merged upstream.
+  * debian/control
+    - Bump standards version to 4.6.2, no changes needed.
+  * debian/copyright
+    - Update copyright years.
+  * debian/rules
+    - Exclude 2 tests failing due to httpbin 0.10.0.
 
- -- Tsic404 <liuheng@deepin.org>  Sat, 28 Jan 2023 13:46:49 +0800
+ -- Daniele Tricoli <eriol@debian.org>  Fri, 22 Sep 2023 03:13:51 +0200
+
+vcr.py (4.2.1-1) unstable; urgency=medium
+
+  * Team upload.
+  * Update d/watch to use /tags
+  * New upstream version 4.2.1
+  * Drop Python 2 compat patch
+  * Use dh-sequence-*
+  * Enable tests and switch to autopkgtest-pkg-pybuild (Closes: #801343)
+  * Move package description to source package
+  * Drop salsa-ci.yml
+  * Add Multi-Arch according to MA hinter
+  * Drop unused build dependencies
+
+ -- Jochen Sprickerhof <jspricke@debian.org>  Fri, 16 Dec 2022 19:30:20 +0100
+
+vcr.py (4.1.1-2) unstable; urgency=medium
+
+  [ Debian Janitor ]
+  * Remove constraints unnecessary since buster:
+    + Build-Depends: Drop versioned constraint on python3-six and
+      python3-sphinx.
+  * Update standards version to 4.6.1, no changes needed.
+
+ -- Jelmer Vernooĳ <jelmer@debian.org>  Mon, 17 Oct 2022 01:17:25 +0100
+
+vcr.py (4.1.1-1) unstable; urgency=medium
+
+  [ Debian Janitor ]
+  * Set upstream metadata fields: Bug-Database, Bug-Submit, Repository.
+  * Update standards version to 4.5.0, no changes needed.
+
+  [ Ondřej Nový ]
+  * d/control: Update Maintainer field with new Debian Python Team
+    contact address.
+  * d/control: Update Vcs-* fields with new Debian Python Team Salsa
+    layout.
+
+  [ Daniele Tricoli ]
+  * New upstream version 4.1.1
+  * Refresh patches.
+  * Enable salsa pipelines.
+  * debian/copyright
+    - Update copyright years.
+  * debian/control
+    - Bump debhelper compat to 13.
+    - Bump standards version to 4.6.0, no changes needed.
+  * debian/tests/python3-vcr
+    - Fix runtime-test-file-uses-installed-python-versions.
+    - Disable test_unsupported_features_raise_error_disabled and
+      test_cannot_overwrite_cassette_raise_error_disabled tests.
+  * debian/rules
+    - Make build not to vary with the locale.
+
+
+ -- Daniele Tricoli <eriol@debian.org>  Sun, 20 Mar 2022 22:44:31 +0100
+
+vcr.py (4.0.2-1) unstable; urgency=medium
+
+  * New upstream release.
+  * Refresh all patches.
+  * Add gbp configuration.
+  * Use my debian.org email.
+  * debian/control
+    - Bump debhelper compat to 12.
+    - Bump Standards-Version to 4.4.1 (no changes needed).
+    - Don't depend on boto, only on boto3.
+    - Set Rules-Requires-Root: no
+  * debian/copyright
+    - Update copyright years.
+  * debian/rules
+    - Remove the zero byte file in doc directory.
+  * debian/upstream/metadata
+    - Set upstream metadata fields: Repository, Repository-Browse. Thanks to
+      Debian Janitor Project for the patch.
+
+ -- Daniele Tricoli <eriol@debian.org>  Sun, 22 Dec 2019 14:48:05 +0100
+
+vcr.py (2.0.1-4) unstable; urgency=medium
+
+  * Team upload.
+
+  [ Ondřej Nový ]
+  * Rename d/tests/control.autodep8 to d/tests/control.
+  * Use debhelper-compat instead of debian/compat.
+
+  [ Andrey Rahmatullin ]
+  * Drop Python 2 support.
+
+ -- Andrey Rahmatullin <wrar@debian.org>  Wed, 21 Aug 2019 23:22:01 +0500
+
+vcr.py (2.0.1-3) unstable; urgency=medium
+
+  * Team upload
+  * Let autodep8 generate a plain import autopkgtest for python2/python3
+  * Add missing runtime dependency on python-contextlib2 and python-mock
+  * Make sure autopkgtests test the installed version of vcr
+
+ -- Nicolas Dandrimont <olasd@debian.org>  Fri, 09 Nov 2018 11:28:15 +0100
+
+vcr.py (2.0.1-2) unstable; urgency=medium
+
+  * Team upload
+  * d/patches:
+    The patch I designed in previous release is broken by design as it can
+    trigger python2.7 syntax error. Replace it by a balanced solution that
+    shouldn't pose such issue. (Closes: #911064)
+
+ -- Pierre-Elliott Bécue <peb@debian.org>  Wed, 17 Oct 2018 22:09:54 +0200
+
+vcr.py (2.0.1-1) unstable; urgency=medium
+
+  * Team upload
+
+  [ Ondřej Nový ]
+  * d/control: Set Vcs-* to salsa.debian.org
+  * d/copyright: Use https protocol in Format field
+  * d/control: Remove ancient X-Python-Version field
+  * d/control: Remove ancient X-Python3-Version field
+  * Convert git repository from git-dpm to gbp layout
+  * Use 'python3 -m sphinx' instead of sphinx-build for building docs
+
+  [ Pierre-Elliott Bécue ]
+  * New upstream release: 2.0.1 (Closes: #903989)
+  * d/control:
+    - Bump Standards-Version to 4.2.1. No change required
+    - Raise dh compat to 11
+  * d/tests/control:
+    - Add tornado as test dependencies to improve the coverage
+  * d/patches:
+    - Add patch 0002 to fix python3.7 issues in the code (and in testing) as
+      PEP479 is now enabled. The patch relies on the proper use of yield from
+      in python3 >= 3.5 and upstream's code otherwise.
+
+ -- Pierre-Elliott Bécue <peb@debian.org>  Sun, 14 Oct 2018 13:55:51 +0200
+
+vcr.py (1.11.1-1) unstable; urgency=medium
+
+  * New upstream release.
+  * debian/control
+    - Bump Standards-Version to 4.1.0 (no changes needed).
+    - Use Python 3 Sphinx documentation generator.
+  * debian/copyright
+    - Update copyright years.
+  * debian/python-vcr.pyremove
+    - Remove _handle_coroutine.py module from Python 2 build since it's a
+      Python 3 module.
+  * debian/rules
+    - Replace usage of dpkg-parsechangelog with $SOURCE_DATE_EPOCH.
+  * debian/tests/python3-vcr
+    - Exclude TLS failing tests.
+
+ -- Daniele Tricoli <eriol@mornie.org>  Sat, 23 Sep 2017 03:28:42 +0200
+
+vcr.py (1.10.0-1) unstable; urgency=medium
+
+  * New upstream release.
+  * Build python-vcr-doc.
+  * debian/clean
+    - Clean egg-info to make the package build twice in a row.
+  * debian/control
+    - Remove Daniel Stender and add myself as uploader. (Closes: #816592)
+      Thanks to Daniel for his past work!
+    - Add python{,3}-pytest-httpbin, python-sphinx and python-sphinx-rtd-theme
+      to Build-Depends.
+    - Add stanza for python-vcr-doc.
+  * debian/copyright
+    - Add myself as copyright holder for debian directory.
+  * debian/patches/remove-privacy-breach.patch
+    - Remove privacy breach URLs.
+  * debian/python-vcr-doc.doc-base
+    - Add doc base registration.
+  * debian/python-vcr.pyremove
+    - Remove from Python2 package a module using Python3 syntax.
+  * debian/rules
+    - Update changelog creation.
+    - Build sphinx documentation.
+  * debian/tests/control
+    - Wrap and sort Depends.
+    - Add python{,3}-pytest-httpbin to Depends.
+    - Remove python{,3}-pytest-tornado, python{,3}-requests,
+      python{,3}-tornado and python{,3}-urllib3 from Depends to skip tests
+      needing Internet connection.
+
+ -- Daniele Tricoli <eriol@mornie.org>  Sun, 04 Sep 2016 23:24:54 +0200
+
+vcr.py (1.7.3-2) unstable; urgency=medium
+
+  * deb/control:
+    + put team into Maintainer field (for unconfirmed team uploads).
+    + updated uploader email address.
+    + bumped standards to 3.9.8 (no changes needed).
+    + removed Testsuite field (deprecated).
+  * deb/copyright: updated.
+  * Put repo under git-dpm regime:
+    + added deb/.git-dpm.
+    + removed deb/gbp.conf.
+
+    [ Ondřej Nový ]
+  * Fixed VCS URL (https).
+
+ -- Daniel Stender <stender@debian.org>  Sat, 25 Jun 2016 19:54:46 +0200
+
+vcr.py (1.7.3-1) unstable; urgency=medium
+
+  * New upstream release.
+  * deb/rules: don't run tests on Debian (Closes: #795940), but on Neurodebian.
+
+ -- Daniel Stender <debian@danielstender.com>  Wed, 07 Oct 2015 22:53:50 +0200
+
+vcr.py (1.6.1-1) unstable; urgency=medium
+
+  * Initial release (Closes: #792700).
+
+ -- Daniel Stender <debian@danielstender.com>  Sat, 01 Aug 2015 10:25:23 +0200

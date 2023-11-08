@@ -1,4 +1,40 @@
 #!/usr/bin/make -f
+#export DH_VERBOSE=1
+
+export PYBUILD_NAME=vcr
+export PYBUILD_TEST_ARGS=--ignore tests/integration/test_aiohttp.py \
+    --ignore tests/integration/test_tornado.py \
+    --ignore tests/integration/test_requests.py \
+    -m "not online" \
+    -k "not test_basic_json_use and not test_load_cassette_with_custom_persister"
+
+export http_proxy=
+export https_proxy=
+
+include /usr/share/dpkg/pkg-info.mk
+
+BUILD_DATE  = $(shell LC_ALL=C date -u "+%B %d, %Y" -d "@$(SOURCE_DATE_EPOCH)")
+SPHINXOPTS := -D html_last_updated_fmt="$(BUILD_DATE)"
+export LC_ALL=C.UTF-8
 
 %:
-	dh $@
+	dh $@ --buildsystem=pybuild
+
+override_dh_installdocs:
+	pandoc -f rst -t plain -o .pybuild/README README.rst
+	dh_installdocs -A .pybuild/README
+
+override_dh_installchangelogs:
+	pandoc -f rst -t plain -o .pybuild/changelog docs/changelog.rst
+	dh_installchangelogs -A .pybuild/changelog
+
+override_dh_sphinxdoc:
+ifeq (,$(findstring nodocs, $(DEB_BUILD_OPTIONS)))
+	PYTHONPATH=. python3 -m sphinx $(SPHINXOPTS) -N -bhtml docs/ \
+		debian/python-vcr-doc/usr/share/doc/python-vcr-doc/html/
+
+	# Remove the zero byte file in doc directory.
+	rm debian/python-vcr-doc/usr/share/doc/python-vcr-doc/html/.nojekyll
+
+	dh_sphinxdoc
+endif
