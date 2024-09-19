@@ -1,19 +1,44 @@
 """Test requests' interaction with vcr"""
-
+import asyncio
+import functools
+import inspect
 import json
 
 import pytest
-from assertions import assert_cassette_empty, assert_is_json_bytes
 
 import vcr
 from vcr.errors import CannotOverwriteExistingCassetteException
 
+from ..assertions import assert_cassette_empty, assert_is_json_bytes
+
 tornado = pytest.importorskip("tornado")
+gen = pytest.importorskip("tornado.gen")
 http = pytest.importorskip("tornado.httpclient")
 
 # whether the current version of Tornado supports the raise_error argument for
 # fetch().
 supports_raise_error = tornado.version_info >= (4,)
+raise_error_for_response_code_only = tornado.version_info >= (6,)
+
+
+def gen_test(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        async def coro():
+            return await gen.coroutine(func)(*args, **kwargs)
+
+        return asyncio.run(coro())
+
+    # Patch the signature so pytest can inject fixtures
+    # we can't use wrapt.decorator because it returns a generator function
+    wrapper.__signature__ = inspect.signature(func)
+    return wrapper
+
+
+@pytest.fixture(params=["https", "http"])
+def scheme(request):
+    """Fixture that returns both http and https."""
+    return request.param
 
 
 @pytest.fixture(params=["simple", "curl", "default"])
@@ -43,7 +68,8 @@ def post(client, url, data=None, **kwargs):
     return client.fetch(http.HTTPRequest(url, method="POST", **kwargs))
 
 
-@pytest.mark.gen_test
+@pytest.mark.online
+@gen_test
 def test_status_code(get_client, scheme, tmpdir):
     """Ensure that we can read the status code"""
     url = scheme + "://httpbin.org/"
@@ -55,7 +81,8 @@ def test_status_code(get_client, scheme, tmpdir):
         assert 1 == cass.play_count
 
 
-@pytest.mark.gen_test
+@pytest.mark.online
+@gen_test
 def test_headers(get_client, scheme, tmpdir):
     """Ensure that we can read the headers back"""
     url = scheme + "://httpbin.org/"
@@ -67,7 +94,8 @@ def test_headers(get_client, scheme, tmpdir):
         assert 1 == cass.play_count
 
 
-@pytest.mark.gen_test
+@pytest.mark.online
+@gen_test
 def test_body(get_client, tmpdir, scheme):
     """Ensure the responses are all identical enough"""
 
@@ -80,20 +108,21 @@ def test_body(get_client, tmpdir, scheme):
         assert 1 == cass.play_count
 
 
-@pytest.mark.gen_test
-def test_effective_url(get_client, scheme, tmpdir):
+@gen_test
+def test_effective_url(get_client, tmpdir, httpbin):
     """Ensure that the effective_url is captured"""
-    url = scheme + "://mockbin.org/redirect/301?url=/html"
+    url = httpbin.url + "/redirect/1"
     with vcr.use_cassette(str(tmpdir.join("url.yaml"))):
         effective_url = (yield get(get_client(), url)).effective_url
-        assert effective_url == scheme + "://mockbin.org/redirect/301/0"
+        assert effective_url == httpbin.url + "/get"
 
     with vcr.use_cassette(str(tmpdir.join("url.yaml"))) as cass:
         assert effective_url == (yield get(get_client(), url)).effective_url
         assert 1 == cass.play_count
 
 
-@pytest.mark.gen_test
+@pytest.mark.online
+@gen_test
 def test_auth(get_client, tmpdir, scheme):
     """Ensure that we can handle basic auth"""
     auth = ("user", "passwd")
@@ -108,7 +137,8 @@ def test_auth(get_client, tmpdir, scheme):
         assert 1 == cass.play_count
 
 
-@pytest.mark.gen_test
+@pytest.mark.online
+@gen_test
 def test_auth_failed(get_client, tmpdir, scheme):
     """Ensure that we can save failed auth statuses"""
     auth = ("user", "wrongwrongwrong")
@@ -131,7 +161,8 @@ def test_auth_failed(get_client, tmpdir, scheme):
         assert 1 == cass.play_count
 
 
-@pytest.mark.gen_test
+@pytest.mark.online
+@gen_test
 def test_post(get_client, tmpdir, scheme):
     """Ensure that we can post and cache the results"""
     data = {"key1": "value1", "key2": "value2"}
@@ -146,10 +177,10 @@ def test_post(get_client, tmpdir, scheme):
     assert 1 == cass.play_count
 
 
-@pytest.mark.gen_test
-def test_redirects(get_client, tmpdir, scheme):
+@gen_test
+def test_redirects(get_client, tmpdir, httpbin):
     """Ensure that we can handle redirects"""
-    url = scheme + "://mockbin.org/redirect/301?url=bytes/1024"
+    url = httpbin + "/redirect-to?url=bytes/1024&status_code=301"
     with vcr.use_cassette(str(tmpdir.join("requests.yaml"))):
         content = (yield get(get_client(), url)).body
 
@@ -158,7 +189,8 @@ def test_redirects(get_client, tmpdir, scheme):
         assert cass.play_count == 1
 
 
-@pytest.mark.gen_test
+@pytest.mark.online
+@gen_test
 def test_cross_scheme(get_client, tmpdir, scheme):
     """Ensure that requests between schemes are treated separately"""
     # First fetch a url under http, and then again under https and then
@@ -177,7 +209,8 @@ def test_cross_scheme(get_client, tmpdir, scheme):
         assert cass.play_count == 2
 
 
-@pytest.mark.gen_test
+@pytest.mark.online
+@gen_test
 def test_gzip(get_client, tmpdir, scheme):
     """
     Ensure that httpclient is able to automatically decompress the response
@@ -202,7 +235,8 @@ def test_gzip(get_client, tmpdir, scheme):
         assert 1 == cass.play_count
 
 
-@pytest.mark.gen_test
+@pytest.mark.online
+@gen_test
 def test_https_with_cert_validation_disabled(get_client, tmpdir):
     cass_path = str(tmpdir.join("cert_validation_disabled.yaml"))
 
@@ -214,7 +248,7 @@ def test_https_with_cert_validation_disabled(get_client, tmpdir):
         assert 1 == cass.play_count
 
 
-@pytest.mark.gen_test
+@gen_test
 def test_unsupported_features_raises_in_future(get_client, tmpdir):
     """Ensure that the exception for an AsyncHTTPClient feature not being
     supported is raised inside the future."""
@@ -232,7 +266,11 @@ def test_unsupported_features_raises_in_future(get_client, tmpdir):
 
 
 @pytest.mark.skipif(not supports_raise_error, reason="raise_error unavailable in tornado <= 3")
-@pytest.mark.gen_test
+@pytest.mark.skipif(
+    raise_error_for_response_code_only,
+    reason="raise_error only ignores HTTPErrors due to response code",
+)
+@gen_test
 def test_unsupported_features_raise_error_disabled(get_client, tmpdir):
     """Ensure that the exception for an AsyncHTTPClient feature not being
     supported is not raised if raise_error=False."""
@@ -251,7 +289,8 @@ def test_unsupported_features_raise_error_disabled(get_client, tmpdir):
     assert "not yet supported by VCR" in str(response.error)
 
 
-@pytest.mark.gen_test
+@pytest.mark.online
+@gen_test
 def test_cannot_overwrite_cassette_raises_in_future(get_client, tmpdir):
     """Ensure that CannotOverwriteExistingCassetteException is raised inside
     the future."""
@@ -267,7 +306,11 @@ def test_cannot_overwrite_cassette_raises_in_future(get_client, tmpdir):
 
 
 @pytest.mark.skipif(not supports_raise_error, reason="raise_error unavailable in tornado <= 3")
-@pytest.mark.gen_test
+@pytest.mark.skipif(
+    raise_error_for_response_code_only,
+    reason="raise_error only ignores HTTPErrors due to response code",
+)
+@gen_test
 def test_cannot_overwrite_cassette_raise_error_disabled(get_client, tmpdir):
     """Ensure that CannotOverwriteExistingCassetteException is not raised if
     raise_error=False in the fetch() call."""
@@ -281,14 +324,14 @@ def test_cannot_overwrite_cassette_raise_error_disabled(get_client, tmpdir):
     assert isinstance(response.error, CannotOverwriteExistingCassetteException)
 
 
-@pytest.mark.gen_test
+@gen_test
 @vcr.use_cassette(path_transformer=vcr.default_vcr.ensure_suffix(".yaml"))
 def test_tornado_with_decorator_use_cassette(get_client):
     response = yield get_client().fetch(http.HTTPRequest("http://www.google.com/", method="GET"))
     assert response.body.decode("utf-8") == "not actually google"
 
 
-@pytest.mark.gen_test
+@gen_test
 @vcr.use_cassette(path_transformer=vcr.default_vcr.ensure_suffix(".yaml"))
 def test_tornado_exception_can_be_caught(get_client):
     try:
@@ -302,7 +345,8 @@ def test_tornado_exception_can_be_caught(get_client):
         assert e.code == 404
 
 
-@pytest.mark.gen_test
+@pytest.mark.online
+@gen_test
 def test_existing_references_get_patched(tmpdir):
     from tornado.httpclient import AsyncHTTPClient
 
@@ -315,7 +359,8 @@ def test_existing_references_get_patched(tmpdir):
         assert cass.play_count == 1
 
 
-@pytest.mark.gen_test
+@pytest.mark.online
+@gen_test
 def test_existing_instances_get_patched(get_client, tmpdir):
     """Ensure that existing instances of AsyncHTTPClient get patched upon
     entering VCR context."""
@@ -330,7 +375,8 @@ def test_existing_instances_get_patched(get_client, tmpdir):
         assert cass.play_count == 1
 
 
-@pytest.mark.gen_test
+@pytest.mark.online
+@gen_test
 def test_request_time_is_set(get_client, tmpdir):
     """Ensures that the request_time on HTTPResponses is set."""
 
