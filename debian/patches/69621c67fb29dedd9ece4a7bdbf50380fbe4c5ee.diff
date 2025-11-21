@@ -1,0 +1,19 @@
+diff --git a/vcr/stubs/__init__.py b/vcr/stubs/__init__.py
+index dafaec7..4d4bb39 100644
+--- a/vcr/stubs/__init__.py
++++ b/vcr/stubs/__init__.py
+@@ -389,6 +389,8 @@ class VCRHTTPConnection(VCRConnection):
+ 
+     _baseclass = HTTPConnection
+     _protocol = "http"
++    debuglevel = _baseclass.debuglevel
++    _http_vsn = _baseclass._http_vsn
+ 
+ 
+ class VCRHTTPSConnection(VCRConnection):
+@@ -397,3 +399,5 @@ class VCRHTTPSConnection(VCRConnection):
+     _baseclass = HTTPSConnection
+     _protocol = "https"
+     is_verified = True
++    debuglevel = _baseclass.debuglevel
++    _http_vsn = _baseclass._http_vsn

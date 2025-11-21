@@ -1,0 +1,25 @@
+diff --git a/.readthedocs.yaml b/.readthedocs.yaml
+index 68c4590..84d2691 100644
+--- a/.readthedocs.yaml
++++ b/.readthedocs.yaml
+@@ -9,7 +9,7 @@ version: 2
+ build:
+   os: ubuntu-22.04
+   tools:
+-    python: "3.11"
++    python: "3.12"
+ 
+ # Build documentation in the docs/ directory with Sphinx
+ sphinx:
+diff --git a/setup.py b/setup.py
+index 37d1558..71ba6a2 100644
+--- a/setup.py
++++ b/setup.py
+@@ -100,6 +100,7 @@ setup(
+         "Programming Language :: Python :: 3.9",
+         "Programming Language :: Python :: 3.10",
+         "Programming Language :: Python :: 3.11",
++        "Programming Language :: Python :: 3.12",
+         "Programming Language :: Python :: 3 :: Only",
+         "Programming Language :: Python :: Implementation :: CPython",
+         "Programming Language :: Python :: Implementation :: PyPy",
