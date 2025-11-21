@@ -1,0 +1,12 @@
+diff --git a/tox.ini b/tox.ini
+index b209bd9..e147690 100644
+--- a/tox.ini
++++ b/tox.ini
+@@ -81,3 +81,7 @@ passenv =
+     AWS_ACCESS_KEY_ID
+     AWS_DEFAULT_REGION
+     AWS_SECRET_ACCESS_KEY
++setenv =
++    # workaround for broken C extension in aiohttp
++    # see: https://github.com/aio-libs/aiohttp/issues/7229
++    py312: AIOHTTP_NO_EXTENSIONS=1
