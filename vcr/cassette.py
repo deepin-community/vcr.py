@@ -3,7 +3,6 @@ import contextlib
 import copy
 import inspect
 import logging
-import sys
 from asyncio import iscoroutinefunction
 
 import wrapt
@@ -126,20 +125,7 @@ class CassetteContextDecorator:
         duration of the generator.
         """
         with self as cassette:
-            coroutine = fn(cassette)
-            # We don't need to catch StopIteration. The caller (Tornado's
-            # gen.coroutine, for example) will handle that.
-            to_yield = next(coroutine)
-            while True:
-                try:
-                    to_send = yield to_yield
-                except Exception:
-                    to_yield = coroutine.throw(*sys.exc_info())
-                else:
-                    try:
-                        to_yield = coroutine.send(to_send)
-                    except StopIteration:
-                        break
+            return (yield from fn(cassette))
 
     def _handle_function(self, fn):
         with self as cassette:
@@ -229,7 +215,7 @@ class Cassette:
 
     @property
     def write_protected(self):
-        return self.rewound and self.record_mode == RecordMode.ONCE or self.record_mode == RecordMode.NONE
+        return (self.rewound and self.record_mode == RecordMode.ONCE) or self.record_mode == RecordMode.NONE
 
     def append(self, request, response):
         """Add a request, response pair to this cassette"""

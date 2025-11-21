@@ -1,0 +1,24 @@
+From: Rob Brackett <rob@robbrackett.com>
+Date: Fri, 29 Sep 2023 12:41:44 -0700
+Subject: Fix deprecated intersphinx_mapping format
+
+This updates the format for `intersphinx_mapping` to use the actively maintained format. The previous format has been deprecated for a while and is slated to be removed in the next major release of Sphinx.
+
+Origin: other, https://github.com/kevin1024/vcrpy/pull/772
+Bug-Debian: https://bugs.debian.org/1090175
+Last-Update: 2024-12-17
+---
+ docs/conf.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/docs/conf.py b/docs/conf.py
+index b410b01..cbb6c8b 100644
+--- a/docs/conf.py
++++ b/docs/conf.py
+@@ -316,5 +316,5 @@ texinfo_documents = [
+ 
+ 
+ # Example configuration for intersphinx: refer to the Python standard library.
+-intersphinx_mapping = {"https://docs.python.org/": None}
++intersphinx_mapping = {"python": ("https://docs.python.org/3/", None)}
+ html_theme = "alabaster"

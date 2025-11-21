@@ -66,6 +66,7 @@ class VCRHTTPResponse(HTTPResponse):
         self.reason = recorded_response["status"]["message"]
         self.status = self.code = recorded_response["status"]["code"]
         self.version = None
+        self.version_string = None
         self._content = BytesIO(self.recorded_response["body"]["string"])
         self._closed = False
         self._original_response = self  # for requests.session.Session cookie extraction
@@ -389,6 +390,8 @@ class VCRHTTPConnection(VCRConnection):
 
     _baseclass = HTTPConnection
     _protocol = "http"
+    debuglevel = _baseclass.debuglevel
+    _http_vsn = _baseclass._http_vsn
 
 
 class VCRHTTPSConnection(VCRConnection):
@@ -397,3 +400,5 @@ class VCRHTTPSConnection(VCRConnection):
     _baseclass = HTTPSConnection
     _protocol = "https"
     is_verified = True
+    debuglevel = _baseclass.debuglevel
+    _http_vsn = _baseclass._http_vsn
