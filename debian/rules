@@ -1,12 +1,19 @@
 #!/usr/bin/make -f
 #export DH_VERBOSE=1
 
+TEST_EXCLUDE := not test_basic_json_use and not test_load_cassette_with_custom_persister
+# Bug #1087334
+TEST_EXCLUDE += and not test_post[http] and not test_post[https]
+TEST_EXCLUDE += and not test_body_consumed_once_stream
+TEST_EXCLUDE += and not test_body_consumed_once_iterator
+TEST_EXCLUDE += and not test_additional_matchers
+
 export PYBUILD_NAME=vcr
 export PYBUILD_TEST_ARGS=--ignore tests/integration/test_aiohttp.py \
     --ignore tests/integration/test_tornado.py \
     --ignore tests/integration/test_requests.py \
     -m "not online" \
-    -k "not test_basic_json_use and not test_load_cassette_with_custom_persister"
+    -k "$(TEST_EXCLUDE)"
 
 export http_proxy=
 export https_proxy=

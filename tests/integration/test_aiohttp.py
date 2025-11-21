@@ -1,8 +1,10 @@
-import contextlib
 import logging
+import ssl
 import urllib.parse
 
 import pytest
+import pytest_httpbin.certs
+import yarl
 
 import vcr
 
@@ -12,12 +14,14 @@ aiohttp = pytest.importorskip("aiohttp")
 
 from .aiohttp_utils import aiohttp_app, aiohttp_request  # noqa: E402
 
+HTTPBIN_SSL_CONTEXT = ssl.create_default_context(cafile=pytest_httpbin.certs.where())
+
 
 def run_in_loop(fn):
-    with contextlib.closing(asyncio.new_event_loop()) as loop:
-        asyncio.set_event_loop(loop)
-        task = loop.create_task(fn(loop))
-        return loop.run_until_complete(task)
+    async def wrapper():
+        return await fn(asyncio.get_running_loop())
+
+    return asyncio.run(wrapper())
 
 
 def request(method, url, output="text", **kwargs):
@@ -36,8 +40,8 @@ def post(url, output="text", **kwargs):
 
 
 @pytest.mark.online
-def test_status(tmpdir, mockbin_request_url):
-    url = mockbin_request_url
+def test_status(tmpdir, httpbin):
+    url = httpbin.url
 
     with vcr.use_cassette(str(tmpdir.join("status.yaml"))):
         response, _ = get(url)
@@ -50,8 +54,8 @@ def test_status(tmpdir, mockbin_request_url):
 
 @pytest.mark.online
 @pytest.mark.parametrize("auth", [None, aiohttp.BasicAuth("vcrpy", "test")])
-def test_headers(tmpdir, auth, mockbin_request_url):
-    url = mockbin_request_url
+def test_headers(tmpdir, auth, httpbin):
+    url = httpbin.url
     with vcr.use_cassette(str(tmpdir.join("headers.yaml"))):
         response, _ = get(url, auth=auth)
 
@@ -67,8 +71,8 @@ def test_headers(tmpdir, auth, mockbin_request_url):
 
 
 @pytest.mark.online
-def test_case_insensitive_headers(tmpdir, mockbin_request_url):
-    url = mockbin_request_url
+def test_case_insensitive_headers(tmpdir, httpbin):
+    url = httpbin.url
 
     with vcr.use_cassette(str(tmpdir.join("whatever.yaml"))):
         _, _ = get(url)
@@ -81,8 +85,8 @@ def test_case_insensitive_headers(tmpdir, mockbin_request_url):
 
 
 @pytest.mark.online
-def test_text(tmpdir, mockbin_request_url):
-    url = mockbin_request_url
+def test_text(tmpdir, httpbin):
+    url = httpbin.url
 
     with vcr.use_cassette(str(tmpdir.join("text.yaml"))):
         _, response_text = get(url)
@@ -94,8 +98,8 @@ def test_text(tmpdir, mockbin_request_url):
 
 
 @pytest.mark.online
-def test_json(tmpdir, mockbin_request_url):
-    url = mockbin_request_url
+def test_json(tmpdir, httpbin):
+    url = httpbin.url + "/json"
     headers = {"Content-Type": "application/json"}
 
     with vcr.use_cassette(str(tmpdir.join("json.yaml"))):
@@ -108,8 +112,8 @@ def test_json(tmpdir, mockbin_request_url):
 
 
 @pytest.mark.online
-def test_binary(tmpdir, mockbin_request_url):
-    url = mockbin_request_url + "/image/png"
+def test_binary(tmpdir, httpbin):
+    url = httpbin.url + "/image/png"
     with vcr.use_cassette(str(tmpdir.join("binary.yaml"))):
         _, response_binary = get(url, output="raw")
 
@@ -120,8 +124,8 @@ def test_binary(tmpdir, mockbin_request_url):
 
 
 @pytest.mark.online
-def test_stream(tmpdir, mockbin_request_url):
-    url = mockbin_request_url
+def test_stream(tmpdir, httpbin):
+    url = httpbin.url
 
     with vcr.use_cassette(str(tmpdir.join("stream.yaml"))):
         _, body = get(url, output="raw")  # Do not use stream here, as the stream is exhausted by vcr
@@ -134,10 +138,10 @@ def test_stream(tmpdir, mockbin_request_url):
 
 @pytest.mark.online
 @pytest.mark.parametrize("body", ["data", "json"])
-def test_post(tmpdir, body, caplog, mockbin_request_url):
+def test_post(tmpdir, body, caplog, httpbin):
     caplog.set_level(logging.INFO)
     data = {"key1": "value1", "key2": "value2"}
-    url = mockbin_request_url
+    url = httpbin.url
     with vcr.use_cassette(str(tmpdir.join("post.yaml"))):
         _, response_json = post(url, **{body: data})
 
@@ -159,14 +163,14 @@ def test_post(tmpdir, body, caplog, mockbin_request_url):
 
 
 @pytest.mark.online
-def test_params(tmpdir, mockbin_request_url):
-    url = mockbin_request_url + "?d=d"
+def test_params(tmpdir, httpbin):
+    url = httpbin.url + "/get?d=d"
     headers = {"Content-Type": "application/json"}
     params = {"a": 1, "b": 2, "c": "c"}
 
     with vcr.use_cassette(str(tmpdir.join("get.yaml"))) as cassette:
         _, response_json = get(url, output="json", params=params, headers=headers)
-        assert response_json["queryString"] == {"a": "1", "b": "2", "c": "c", "d": "d"}
+        assert response_json["args"] == {"a": "1", "b": "2", "c": "c", "d": "d"}
 
     with vcr.use_cassette(str(tmpdir.join("get.yaml"))) as cassette:
         _, cassette_response_json = get(url, output="json", params=params, headers=headers)
@@ -175,8 +179,8 @@ def test_params(tmpdir, mockbin_request_url):
 
 
 @pytest.mark.online
-def test_params_same_url_distinct_params(tmpdir, mockbin_request_url):
-    url = mockbin_request_url
+def test_params_same_url_distinct_params(tmpdir, httpbin):
+    url = httpbin.url + "/json"
     headers = {"Content-Type": "application/json"}
     params = {"a": 1, "b": 2, "c": "c"}
 
@@ -195,8 +199,8 @@ def test_params_same_url_distinct_params(tmpdir, mockbin_request_url):
 
 
 @pytest.mark.online
-def test_params_on_url(tmpdir, mockbin_request_url):
-    url = mockbin_request_url + "?a=1&b=foo"
+def test_params_on_url(tmpdir, httpbin):
+    url = httpbin.url + "/get?a=1&b=foo"
     headers = {"Content-Type": "application/json"}
 
     with vcr.use_cassette(str(tmpdir.join("get.yaml"))) as cassette:
@@ -260,9 +264,15 @@ def test_aiohttp_test_client_json(aiohttp_client, tmpdir):
     assert cassette.play_count == 1
 
 
+def test_cleanup_from_pytest_asyncio():
+    # work around https://github.com/pytest-dev/pytest-asyncio/issues/724
+    asyncio.get_event_loop().close()
+    asyncio.set_event_loop(None)
+
+
 @pytest.mark.online
-def test_redirect(tmpdir, mockbin):
-    url = mockbin + "/redirect/302/2"
+def test_redirect(tmpdir, httpbin):
+    url = httpbin.url + "/redirect/2"
 
     with vcr.use_cassette(str(tmpdir.join("redirect.yaml"))):
         response, _ = get(url)
@@ -284,9 +294,9 @@ def test_redirect(tmpdir, mockbin):
 
 
 @pytest.mark.online
-def test_not_modified(tmpdir, mockbin):
+def test_not_modified(tmpdir, httpbin):
     """It doesn't try to redirect on 304"""
-    url = mockbin + "/status/304"
+    url = httpbin.url + "/status/304"
 
     with vcr.use_cassette(str(tmpdir.join("not_modified.yaml"))):
         response, _ = get(url)
@@ -302,13 +312,13 @@ def test_not_modified(tmpdir, mockbin):
 
 
 @pytest.mark.online
-def test_double_requests(tmpdir, mockbin_request_url):
+def test_double_requests(tmpdir, httpbin):
     """We should capture, record, and replay all requests and response chains,
     even if there are duplicate ones.
 
     We should replay in the order we saw them.
     """
-    url = mockbin_request_url
+    url = httpbin.url
 
     with vcr.use_cassette(str(tmpdir.join("text.yaml"))):
         _, response_text1 = get(url, output="text")
@@ -333,7 +343,7 @@ def test_double_requests(tmpdir, mockbin_request_url):
         assert cassette.play_count == 2
 
 
-def test_cookies(httpbin_both, httpbin_ssl_context, tmpdir):
+def test_cookies(httpbin_both, tmpdir):
     async def run(loop):
         cookies_url = httpbin_both.url + (
             "/response-headers?"
@@ -348,12 +358,12 @@ def test_cookies(httpbin_both, httpbin_ssl_context, tmpdir):
         # ------------------------- Record -------------------------- #
         with vcr.use_cassette(tmp) as cassette:
             async with aiohttp.ClientSession(loop=loop, cookie_jar=aiohttp.CookieJar(unsafe=True)) as session:
-                cookies_resp = await session.get(cookies_url, ssl=httpbin_ssl_context)
+                cookies_resp = await session.get(cookies_url, ssl=HTTPBIN_SSL_CONTEXT)
                 home_resp = await session.get(
                     home_url,
                     cookies=req_cookies,
                     headers=req_headers,
-                    ssl=httpbin_ssl_context,
+                    ssl=HTTPBIN_SSL_CONTEXT,
                 )
                 assert cassette.play_count == 0
         assert_responses(cookies_resp, home_resp)
@@ -361,12 +371,12 @@ def test_cookies(httpbin_both, httpbin_ssl_context, tmpdir):
         # -------------------------- Play --------------------------- #
         with vcr.use_cassette(tmp, record_mode=vcr.mode.NONE) as cassette:
             async with aiohttp.ClientSession(loop=loop, cookie_jar=aiohttp.CookieJar(unsafe=True)) as session:
-                cookies_resp = await session.get(cookies_url, ssl=httpbin_ssl_context)
+                cookies_resp = await session.get(cookies_url, ssl=HTTPBIN_SSL_CONTEXT)
                 home_resp = await session.get(
                     home_url,
                     cookies=req_cookies,
                     headers=req_headers,
-                    ssl=httpbin_ssl_context,
+                    ssl=HTTPBIN_SSL_CONTEXT,
                 )
                 assert cassette.play_count == 2
         assert_responses(cookies_resp, home_resp)
@@ -383,7 +393,7 @@ def test_cookies(httpbin_both, httpbin_ssl_context, tmpdir):
     run_in_loop(run)
 
 
-def test_cookies_redirect(httpbin_both, httpbin_ssl_context, tmpdir):
+def test_cookies_redirect(httpbin_both, tmpdir):
     async def run(loop):
         # Sets cookie as provided by the query string and redirects
         cookies_url = httpbin_both.url + "/cookies/set?Cookie_1=Val_1"
@@ -392,9 +402,9 @@ def test_cookies_redirect(httpbin_both, httpbin_ssl_context, tmpdir):
         # ------------------------- Record -------------------------- #
         with vcr.use_cassette(tmp) as cassette:
             async with aiohttp.ClientSession(loop=loop, cookie_jar=aiohttp.CookieJar(unsafe=True)) as session:
-                cookies_resp = await session.get(cookies_url, ssl=httpbin_ssl_context)
+                cookies_resp = await session.get(cookies_url, ssl=HTTPBIN_SSL_CONTEXT)
                 assert not cookies_resp.cookies
-                cookies = session.cookie_jar.filter_cookies(cookies_url)
+                cookies = session.cookie_jar.filter_cookies(yarl.URL(cookies_url))
                 assert cookies["Cookie_1"].value == "Val_1"
                 assert cassette.play_count == 0
 
@@ -403,9 +413,9 @@ def test_cookies_redirect(httpbin_both, httpbin_ssl_context, tmpdir):
         # -------------------------- Play --------------------------- #
         with vcr.use_cassette(tmp, record_mode=vcr.mode.NONE) as cassette:
             async with aiohttp.ClientSession(loop=loop, cookie_jar=aiohttp.CookieJar(unsafe=True)) as session:
-                cookies_resp = await session.get(cookies_url, ssl=httpbin_ssl_context)
+                cookies_resp = await session.get(cookies_url, ssl=HTTPBIN_SSL_CONTEXT)
                 assert not cookies_resp.cookies
-                cookies = session.cookie_jar.filter_cookies(cookies_url)
+                cookies = session.cookie_jar.filter_cookies(yarl.URL(cookies_url))
                 assert cookies["Cookie_1"].value == "Val_1"
                 assert cassette.play_count == 2
 
@@ -417,27 +427,27 @@ def test_cookies_redirect(httpbin_both, httpbin_ssl_context, tmpdir):
                 "Cookie_1=Val_1; Expires=Wed, 21 Oct 2015 07:28:00 GMT",
             ]
             async with aiohttp.ClientSession(loop=loop, cookie_jar=aiohttp.CookieJar(unsafe=True)) as session:
-                cookies_resp = await session.get(cookies_url, ssl=httpbin_ssl_context)
+                cookies_resp = await session.get(cookies_url, ssl=HTTPBIN_SSL_CONTEXT)
                 assert not cookies_resp.cookies
-                cookies = session.cookie_jar.filter_cookies(cookies_url)
+                cookies = session.cookie_jar.filter_cookies(yarl.URL(cookies_url))
                 assert cookies["Cookie_1"].value == "Val_1"
 
     run_in_loop(run)
 
 
 @pytest.mark.online
-def test_not_allow_redirects(tmpdir, mockbin):
-    url = mockbin + "/redirect/308/5"
+def test_not_allow_redirects(tmpdir, httpbin):
+    url = httpbin + "/redirect-to?url=.%2F&status_code=308"
     path = str(tmpdir.join("redirects.yaml"))
 
     with vcr.use_cassette(path):
         response, _ = get(url, allow_redirects=False)
-        assert response.url.path == "/redirect/308/5"
+        assert response.url.path == "/redirect-to"
         assert response.status == 308
 
     with vcr.use_cassette(path) as cassette:
         response, _ = get(url, allow_redirects=False)
-        assert response.url.path == "/redirect/308/5"
+        assert response.url.path == "/redirect-to"
         assert response.status == 308
         assert cassette.play_count == 1
 

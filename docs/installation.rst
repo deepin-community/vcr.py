@@ -9,12 +9,11 @@ with pip::
 Compatibility
 -------------
 
-VCR.py supports Python 3.8+, and `pypy <http://pypy.org>`__.
+VCR.py supports Python 3.9+, and `pypy <http://pypy.org>`__.
 
 The following HTTP libraries are supported:
 
 -  ``aiohttp``
--  ``boto``
 -  ``boto3``
 -  ``http.client``
 -  ``httplib2``

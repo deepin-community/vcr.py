@@ -1,4 +1,5 @@
 """Utilities for patching in cassettes"""
+
 import contextlib
 import functools
 import http.client as httplib
@@ -67,14 +68,6 @@ else:
     _HTTPSConnectionWithTimeout = httplib2.HTTPSConnectionWithTimeout
     _SCHEME_TO_CONNECTION = httplib2.SCHEME_TO_CONNECTION
 
-# Try to save the original types for boto
-try:
-    import boto.https_connection
-except ImportError:  # pragma: no cover
-    pass
-else:
-    _CertValidatingHTTPSConnection = boto.https_connection.CertValidatingHTTPSConnection
-
 # Try to save the original types for Tornado
 try:
     import tornado.simple_httpclient
@@ -103,8 +96,8 @@ try:
 except ImportError:  # pragma: no cover
     pass
 else:
-    _HttpxSyncClient_send = httpx.Client.send
-    _HttpxAsyncClient_send = httpx.AsyncClient.send
+    _HttpxSyncClient_send_single_request = httpx.Client._send_single_request
+    _HttpxAsyncClient_send_single_request = httpx.AsyncClient._send_single_request
 
 
 class CassettePatcherBuilder:
@@ -126,7 +119,6 @@ class CassettePatcherBuilder:
             self._boto3(),
             self._urllib3(),
             self._httplib2(),
-            self._boto(),
             self._tornado(),
             self._aiohttp(),
             self._httpx(),
@@ -269,21 +261,14 @@ class CassettePatcherBuilder:
 
             yield cpool, "HTTPConnectionWithTimeout", VCRHTTPConnectionWithTimeout
             yield cpool, "HTTPSConnectionWithTimeout", VCRHTTPSConnectionWithTimeout
-            yield cpool, "SCHEME_TO_CONNECTION", {
-                "http": VCRHTTPConnectionWithTimeout,
-                "https": VCRHTTPSConnectionWithTimeout,
-            }
-
-    @_build_patchers_from_mock_triples_decorator
-    def _boto(self):
-        try:
-            import boto.https_connection as cpool
-        except ImportError:  # pragma: no cover
-            pass
-        else:
-            from .stubs.boto_stubs import VCRCertValidatingHTTPSConnection
-
-            yield cpool, "CertValidatingHTTPSConnection", VCRCertValidatingHTTPSConnection
+            yield (
+                cpool,
+                "SCHEME_TO_CONNECTION",
+                {
+                    "http": VCRHTTPConnectionWithTimeout,
+                    "https": VCRHTTPSConnectionWithTimeout,
+                },
+            )
 
     @_build_patchers_from_mock_triples_decorator
     def _tornado(self):
@@ -327,11 +312,11 @@ class CassettePatcherBuilder:
         else:
             from .stubs.httpx_stubs import async_vcr_send, sync_vcr_send
 
-            new_async_client_send = async_vcr_send(self._cassette, _HttpxAsyncClient_send)
-            yield httpx.AsyncClient, "send", new_async_client_send
+            new_async_client_send = async_vcr_send(self._cassette, _HttpxAsyncClient_send_single_request)
+            yield httpx.AsyncClient, "_send_single_request", new_async_client_send
 
-            new_sync_client_send = sync_vcr_send(self._cassette, _HttpxSyncClient_send)
-            yield httpx.Client, "send", new_sync_client_send
+            new_sync_client_send = sync_vcr_send(self._cassette, _HttpxSyncClient_send_single_request)
+            yield httpx.Client, "_send_single_request", new_sync_client_send
 
     def _urllib3_patchers(self, cpool, conn, stubs):
         http_connection_remover = ConnectionRemover(
@@ -388,10 +373,6 @@ class ConnectionRemover:
         if isinstance(connection, self._connection_class):
             self._connection_pool_to_connections.setdefault(pool, set()).add(connection)
 
-    def remove_connection_to_pool_entry(self, pool, connection):
-        if isinstance(connection, self._connection_class):
-            self._connection_pool_to_connections[self._connection_class].remove(connection)
-
     def __enter__(self):
         return self
 
@@ -402,10 +383,13 @@ class ConnectionRemover:
                 connection = pool.pool.get()
                 if isinstance(connection, self._connection_class):
                     connections.remove(connection)
+                    connection.close()
                 else:
                     readd_connections.append(connection)
             for connection in readd_connections:
                 pool._put_conn(connection)
+            for connection in connections:
+                connection.close()
 
 
 def reset_patchers():
@@ -446,13 +430,6 @@ def reset_patchers():
         yield mock.patch.object(cpool, "HTTPConnectionWithTimeout", _HTTPConnectionWithTimeout)
         yield mock.patch.object(cpool, "HTTPSConnectionWithTimeout", _HTTPSConnectionWithTimeout)
         yield mock.patch.object(cpool, "SCHEME_TO_CONNECTION", _SCHEME_TO_CONNECTION)
-
-    try:
-        import boto.https_connection as cpool
-    except ImportError:  # pragma: no cover
-        pass
-    else:
-        yield mock.patch.object(cpool, "CertValidatingHTTPSConnection", _CertValidatingHTTPSConnection)
 
     try:
         import tornado.simple_httpclient as simple
